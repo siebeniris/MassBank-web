@@ -408,12 +408,15 @@
 		
 		//----------------------------------------------------
 		// 登録済みチェック処理
+		// check already registrered accessions
 		//----------------------------------------------------
 		// 登録済みIDリスト生成（DB）
 		HashSet<String> regIdList = new HashSet<String>();
 		String[] sqls = { "SELECT ID FROM SPECTRUM ORDER BY ID",
 		                  "SELECT ID FROM RECORD ORDER BY ID",
 		                  "SELECT ID FROM PEAK GROUP BY ID ORDER BY ID",
+		                  "SELECT ID FROM COMMENT ID ORDER BY ID",
+		                  "SELECT ID FROM CH_COMPOUND_CLASS ID ORDER BY ID",
 		                  "SELECT ID FROM CH_NAME ID ORDER BY ID",
 		                  "SELECT ID FROM CH_LINK ID ORDER BY ID",
 		                  "SELECT ID FROM TREE WHERE ID IS NOT NULL AND ID<>'' ORDER BY ID" };
@@ -441,6 +444,7 @@
 			}
 		}
 		// 登録済みIDリスト生成（レコードファイル）
+		// fetch accessions from record file
 		final String[] recFileList = (new File(registPath)).list();
 		for (int i=0; i<recFileList.length; i++) {
 			String name = recFileList[i];
@@ -453,6 +457,7 @@
 		}
 		
 		// 登録済みチェック
+		// compare present and new accessions
 		for (Map.Entry<String, String> e : tmpMap.entrySet()) {
 			String fileId = e.getKey();
 			String fileName = e.getValue();
@@ -494,11 +499,18 @@
 		final String cgiTreeUrl = cgiUrl + "GenTreeSql.cgi";
 		final String cgiHeapUrl = cgiUrl + "CreateHeap.cgi";
 		final String baseParam = "src_dir=" + registPath + "&out_dir=" + tmpPath + "&db=" + selDbName;
-		final String[] sqlSuffixRec = new String[]{ "_RECORD.sql", "_CH_NAME.sql", "_CH_LINK.sql", "_INSTRUMENT.sql" };
-		final String[] sqlSuffixAll = new String[]{ "_PEAK.sql", sqlSuffixRec[0], sqlSuffixRec[1], sqlSuffixRec[2], sqlSuffixRec[3], "_TREE.sql" };
+		
+		final String[] sqlSuffixRec = new String[]{ "_RECORD.sql", "_CH_NAME.sql", "_CH_LINK.sql", "_INSTRUMENT.sql", "_COMMENT.sql", "_CH_COMPOUND_CLASS.sql", "_AC_MASS_SPECTROMETRY.sql", "_AC_CHROMATOGRAPHY.sql", "_MS_FOCUSED_ION.sql", "_MS_DATA_PROCESSING.sql" };
+		
+		//final String[] sqlSuffixAll = new String[]{ "_PEAK.sql", sqlSuffixRec[0], sqlSuffixRec[1], sqlSuffixRec[2], sqlSuffixRec[3], "_TREE.sql" };
+		final String[] sqlSuffixAll = new String[1 + sqlSuffixRec.length + 1];
+		sqlSuffixAll[0]	= "_PEAK.sql";
+		System.arraycopy(sqlSuffixRec, 0, sqlSuffixAll, 1, sqlSuffixRec.length);
+		sqlSuffixAll[sqlSuffixAll.length - 1]	= "_TREE.sql";
 		
 		//----------------------------------------------------
 		// レコードファイルコピー処理
+		// copy record files
 		//----------------------------------------------------
 		File dataFile = null;
 		File registFile = null;
@@ -515,10 +527,11 @@
 			e.printStackTrace();
 			return false;
 		}
-		op.println( msgHid( "registration : reocrd copy complete." ) );
+		op.println( msgHid( "registration : record copy complete." ) );
 		
 		//----------------------------------------------------
 		// PEAK.sql生成
+		// generate PEAK.sql
 		//----------------------------------------------------
 		StringBuilder fname = new StringBuilder();
 		for ( int i=0; i<dataFileList.size(); i++ ) {
@@ -539,6 +552,8 @@
 		op.println( msgHid( "registration : PEAK.sql generated." ) );
 		//----------------------------------------------------
 		// RECORD.sql, CH_NAME.sql, CH_LINK.sql, INSTRUMENT.sql生成
+		// generation of RECORD.sql, CH_NAME.sql, CH_LINK.sql, INSTRUMENT.sql
+		// and COMMENT.sql, CH_COMPOUND_CLASS.sql, AC_MASS_SPECTROMETRY.sql, AC_CHROMATOGRAPHY.sql, MS_FOCUSED_ION.sql, MS_DATA_PROCESSING.sql
 		//----------------------------------------------------
 		PrintWriter[] pw = new PrintWriter[sqlSuffixRec.length];
 		try {
@@ -571,10 +586,11 @@
 				if ( pw[i] != null ) { pw[i].close(); }
 			}
 		}
-		op.println( msgHid( "registration : RECORD.sql, CH_NAME.sql, CH_LINK.sql, INSTRUMENT.sql generated." ) );
+		op.println( msgHid( "registration : RECORD.sql, CH_NAME.sql, CH_LINK.sql, INSTRUMENT.sql, COMMENT.sql, CH_COMPOUND_CLASS.sql, AC_MASS_SPECTROMETRY.sql, AC_CHROMATOGRAPHY.sql, MS_FOCUSED_ION.sql, MS_DATA_PROCESSING.sql generated." ) );
 		
 		//----------------------------------------------------
 		// TREE.sql生成
+		// generate TREE.sql
 		//----------------------------------------------------
 		final String[] tmpDbName = conf.getDbName();
 		final String[] tmpSiteName = conf.getSiteName();
@@ -598,6 +614,7 @@
 
 		//----------------------------------------------------
 		// 生成されたすべてのSQLファイルを実行
+		// Execute all generated SQL files
 		//----------------------------------------------------
 		String insertFile = "";
 		for (String suffix : sqlSuffixAll) {
@@ -613,6 +630,7 @@
 		
 		//----------------------------------------------------
 		// ヒープテーブル更新
+		// update heap table for table PEAK
 		//----------------------------------------------------
 		final String cgiParam = "dsn=" + selDbName;
 		boolean tmpRet = execCgi( cgiHeapUrl, cgiParam );
@@ -1015,6 +1033,7 @@ function selDb() {
 
 		//---------------------------------------------
 		// SVN登録処理
+		// SVN registration process
 		//---------------------------------------------
 		if ( RegistrationCommitter.isActive ) {
 			SVNRegisterUtil.updateRecords(selDbName);
