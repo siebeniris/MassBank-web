@@ -68,11 +68,11 @@ public class StructureToSvgStringGenerator {
 			int sizeSmall, int sizeMedium, int sizeBig
 	){
 		// fetch accession data
-//		DatabaseManager dbManager	= new DatabaseManager(databaseName);
-//		AccessionData accData	= dbManager.getAccessionData(accession);
-//		dbManager.closeConnection();
+		DatabaseManager dbManager	= new DatabaseManager(databaseName);
+		AccessionData accData	= dbManager.getAccessionData(accession);
+		dbManager.closeConnection();
 		
-		AccessionData accData	= AccessionData.getAccessionDataFromFile(databaseName, accession);
+//		AccessionData accData	= AccessionData.getAccessionDataFromFile(databaseName, accession);
 		if(accData == null)
 			return null;
 		

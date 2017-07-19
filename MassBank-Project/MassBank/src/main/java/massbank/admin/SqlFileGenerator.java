@@ -41,7 +41,13 @@ public class SqlFileGenerator {
 	private static final int TABLE_CH_NAME    = 1;
 	private static final int TABLE_CH_LINK    = 2;
 	private static final int TABLE_INSTRUMENT = 3;
-
+	private static final int TABLE_COMMENT    = 4;
+	private static final int TABLE_CH_COMPOUND_CLASS	= 5;
+	private static final int TABLE_AC_MASS_SPECTROMETRY	= 6;
+	private static final int TABLE_AC_CHROMATOGRAPHY	= 7;
+	private static final int TABLE_MS_FOCUSED_ION		= 8;
+	private static final int TABLE_MS_DATA_PROCESSING	= 9;
+	
 	private int ver = 2;
 	private String[] instNo = null;
 	private String[] instName = null;
@@ -61,7 +67,15 @@ public class SqlFileGenerator {
 	private ArrayList<String> valLinkNames = new ArrayList<String>();
 	private ArrayList<String> valLinkIds = new ArrayList<String>();
 	private Hashtable<String, String> existItem = new Hashtable<String, String>();
-
+	
+	private ArrayList<String> valCOMMENT = new ArrayList<String>();
+	private ArrayList<String> valCH_COMPOUND_CLASS_NAME = new ArrayList<String>();
+	private ArrayList<String> valCH_COMPOUND_CLASS_CLASS = new ArrayList<String>();
+	private ArrayList<String> valAC_MASS_SPECTROMETRY = new ArrayList<String>();
+	private ArrayList<String> valAC_CHROMATOGRAPHY = new ArrayList<String>();
+	private ArrayList<String> valMS_FOCUSED_ION = new ArrayList<String>();
+	private ArrayList<String> valMS_DATA_PROCESSING = new ArrayList<String>();
+	
 	/**
 	 * コンストラクタ
 	 * @param baseUrl ベースURL
@@ -110,6 +124,14 @@ public class SqlFileGenerator {
 			this.valNames.clear();
 			this.valLinkNames.clear();
 			this.valLinkIds.clear();
+			this.valCOMMENT.clear();
+			this.valCH_COMPOUND_CLASS_NAME.clear();
+			this.valCH_COMPOUND_CLASS_CLASS.clear();
+			this.valAC_MASS_SPECTROMETRY.clear();
+			this.valAC_CHROMATOGRAPHY.clear();
+			this.valMS_FOCUSED_ION.clear();
+			this.valMS_DATA_PROCESSING.clear();
+			
 			String line = "";
 
 			existItem.clear();
@@ -128,7 +150,15 @@ public class SqlFileGenerator {
 					  || name.equals("CH$EXACT_MASS")
 					  || name.equals("CH$SMILES")
 					  || name.equals("CH$IUPAC")
-					  || name.equals("DATE") ) {
+					  || name.equals("DATE")
+					  
+					  || name.equals("RECORD_TITLE")
+					  || name.equals("AUTHORS")
+					  || name.equals("LICENSE")
+					  || name.equals("COPYRIGHT")
+					  || name.equals("PUBLICATION")
+					  || name.equals("PK_SPLASH")
+				) {
 					this.setRecord();
 				}
 				else if ( name.equals("AC$INSTRUMENT") ) {
@@ -136,14 +166,35 @@ public class SqlFileGenerator {
 				}
 				else if ( name.equals("AC$INSTRUMENT_TYPE") ) {
 					this.acInstType = value.trim();
-					if ( ver == 1 ) {
-						this.acMsType = "N/A";	// フォーマットバージョンが1の場合はMS_TYPEが必須項目ではないため必ずN/Aとする
-						this.setRecord();
-					}
+//					if ( ver == 1 ) {
+//						this.acMsType = "N/A";	// フォーマットバージョンが1の場合はMS_TYPEが必須項目ではないため必ずN/Aとする
+//						this.setRecord();
+//					}
 				}
 				else if ( name.equals("AC$MASS_SPECTROMETRY") && value.startsWith("MS_TYPE") && ver != 1 ) {
 					this.acMsType = value.replaceAll("MS_TYPE", "").trim();
 					this.setRecord();
+				}
+				//***********************************************
+				// Tables COMMENT, CH_COMPOUND_CLASS, AC_MASS_SPECTROMETRY, AC_CHROMATOGRAPHY, MS_FOCUSED_ION, MS_DATA_PROCESSING
+				//***********************************************
+				else if ( name.equals("COMMENT") ) {
+					this.setCOMMENT();
+				}
+				else if ( name.equals("CH$COMPOUND_CLASS") ) {
+					this.setCH_COMPOUND_CLASS();
+				}
+				else if ( name.equals("AC$MASS_SPECTROMETRY") ) {
+					this.setAC_MASS_SPECTROMETRY();
+				}
+				else if ( name.equals("AC$CHROMATOGRAPHY") ) {
+					this.setAC_CHROMATOGRAPHY();
+				}
+				else if ( name.equals("MS$FOCUSED_ION") ) {
+					this.setMS_FOCUSED_ION();
+				}
+				else if ( name.equals("MS$DATA_PROCESSING") ) {
+					this.setMS_DATA_PROCESSING();
 				}
 				//***********************************************
 				// テーブル:CH_NAME
@@ -181,6 +232,18 @@ public class SqlFileGenerator {
 			if ( valLinkNames.size() == 0 ) { ret = false; } break;
 		case TABLE_INSTRUMENT:
 			if ( valInst.equals("") )  { ret = false; } break;
+		case TABLE_COMMENT:
+			if ( valCOMMENT.size() == 0 ) { ret = false; } break;
+		case TABLE_CH_COMPOUND_CLASS:
+			if ( valCH_COMPOUND_CLASS_NAME.size() == 0 ) { ret = false; } break;
+		case TABLE_AC_MASS_SPECTROMETRY:
+			if ( valAC_MASS_SPECTROMETRY.size() == 0 ) { ret = false; } break;
+		case TABLE_AC_CHROMATOGRAPHY:
+			if ( valAC_CHROMATOGRAPHY.size() == 0 ) { ret = false; } break;
+		case TABLE_MS_FOCUSED_ION:
+			if ( valMS_FOCUSED_ION.size() == 0 ) { ret = false; } break;
+		case TABLE_MS_DATA_PROCESSING:
+			if ( valMS_DATA_PROCESSING.size() == 0 ) { ret = false; } break;
 		default: break;
 		}
 		return ret;
@@ -199,12 +262,7 @@ public class SqlFileGenerator {
 					+ acc + "'" + valReco + ");";
 			break;
 		case TABLE_CH_NAME:
-			for ( int i = 0; i < valNames.size(); i++ ) {
-				sql += "INSERT INTO CH_NAME VALUES('" + acc + "', '" + valNames.get(i) + "');";
-				if ( i < valNames.size() - 1 ) {
-					sql += "\n";
-				}
-			}
+			sql	= SqlFileGenerator.generateSqlForIdVersusValueTable("CH_NAME",				acc, valNames);
 			break;
 		case TABLE_CH_LINK:
 			for ( int i = 0; i < valLinkNames.size(); i++ ) {
@@ -217,10 +275,45 @@ public class SqlFileGenerator {
 		case TABLE_INSTRUMENT:
 			sql = "INSERT INTO INSTRUMENT(INSTRUMENT_NO, INSTRUMENT_TYPE, INSTRUMENT_NAME) VALUES(" + valInst + ");";
 			break;
+		case TABLE_COMMENT:
+			sql	= SqlFileGenerator.generateSqlForIdVersusValueTable("COMMENT",				acc, valCOMMENT);
+			break;
+		case TABLE_CH_COMPOUND_CLASS:
+			StringBuilder sqlSB = new StringBuilder();
+			for ( int i = 0; i < valCH_COMPOUND_CLASS_NAME.size(); i++ ) {
+				sqlSB.append("INSERT INTO " + "CH_COMPOUND_CLASS" + " VALUES('" + acc + "', '" + valCH_COMPOUND_CLASS_CLASS.get(i) + "', '" + valCH_COMPOUND_CLASS_NAME.get(i) + "');");
+				if ( i < valCH_COMPOUND_CLASS_NAME.size() - 1 ) {
+					sqlSB.append("\n");
+				}
+			}
+			sql	= sqlSB.toString();
+			break;
+		case TABLE_AC_MASS_SPECTROMETRY:
+			sql	= SqlFileGenerator.generateSqlForIdVersusValueTable("AC_MASS_SPECTROMETRY",	acc, valAC_MASS_SPECTROMETRY);
+			break;
+		case TABLE_AC_CHROMATOGRAPHY:
+			sql	= SqlFileGenerator.generateSqlForIdVersusValueTable("AC_CHROMATOGRAPHY",	acc, valAC_CHROMATOGRAPHY);
+			break;
+		case TABLE_MS_FOCUSED_ION:
+			sql	= SqlFileGenerator.generateSqlForIdVersusValueTable("MS_FOCUSED_ION",		acc, valMS_FOCUSED_ION);
+			break;
+		case TABLE_MS_DATA_PROCESSING:
+			sql	= SqlFileGenerator.generateSqlForIdVersusValueTable("MS_DATA_PROCESSING",	acc, valMS_DATA_PROCESSING);
+			break;
 		default:
 			break;
 		}
 		return sql;
+	}
+	private static String generateSqlForIdVersusValueTable(String tableName, String acc, ArrayList<String> val){
+		StringBuilder sql = new StringBuilder();
+		for ( int i = 0; i < val.size(); i++ ) {
+			sql.append("INSERT INTO " + tableName + " VALUES('" + acc + "', '" + val.get(i) + "');");
+			if ( i < val.size() - 1 ) {
+				sql.append("\n");
+			}
+		}
+		return sql.toString();
 	}
 
 	/**
@@ -230,7 +323,10 @@ public class SqlFileGenerator {
 		if ( name.equals("CH$FORMULA")
 	 	  || name.equals("CH$EXACT_MASS")
 	 	  || name.equals("CH$SMILES")
-	 	  || name.equals("CH$IUPAC")  ) {
+	 	  || name.equals("CH$IUPAC")
+	 	  
+	 	  || name.equals("PK$SPLASH")
+	 	) {
 			String exist = (String)this.existItem.get(name);
 			if ( exist == null ) {
 				existItem.put(name, "true");
@@ -238,7 +334,9 @@ public class SqlFileGenerator {
 			else {
 				return;
 			}
-			nameReco += ", " + name.substring(3);
+			
+			// handle special fields: MASS_SPECTROMETRY, CHROMATOGRAPHY
+			nameReco += ", " + this.name.substring(3);
 			valReco += ", ";
 			if ( name.equals("CH$EXACT_MASS") ) {
 				try {
@@ -258,7 +356,13 @@ public class SqlFileGenerator {
 				valReco += "'" + value + "'";
 			}
 		}
-		else if ( name.equals("DATE") ) {
+		else if ( name.equals("DATE")
+				|| name.equals("RECORD_TITLE")
+			 	|| name.equals("AUTHORS")
+			 	|| name.equals("LICENSE")
+			 	|| name.equals("COPYRIGHT")
+			 	|| name.equals("PUBLICATION")
+		) {
 			nameReco += ", " + name;
 			valReco += ", '" + value + "'";
 		}
@@ -309,7 +413,31 @@ public class SqlFileGenerator {
 			valReco += ", '" + this.acMsType + "'";	
 		}
 	}
-
+	private void setCOMMENT() {
+		valCOMMENT.add( value );
+	}
+	private void setCH_COMPOUND_CLASS() {
+		if(value.indexOf("; ") == -1){
+			valCH_COMPOUND_CLASS_CLASS.add( "NA" );
+			valCH_COMPOUND_CLASS_NAME.add( value );
+		} else {
+			String[] tmp	= value.split("; ");
+			valCH_COMPOUND_CLASS_CLASS.add( tmp[0] );
+			valCH_COMPOUND_CLASS_NAME.add( value.substring( (tmp[0] + "; ").length() ) );
+		}
+	}
+	private void setAC_MASS_SPECTROMETRY() {
+		valAC_MASS_SPECTROMETRY.add( value );
+	}
+	private void setAC_CHROMATOGRAPHY() {
+		valAC_CHROMATOGRAPHY.add( value );
+	}
+	private void setMS_FOCUSED_ION() {
+		valMS_FOCUSED_ION.add( value );
+	}
+	private void setMS_DATA_PROCESSING() {
+		valMS_DATA_PROCESSING.add( value );
+	}
 	/**
 	 * CH_NAMEテーブルSQL文セット
 	 */ 

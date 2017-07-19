@@ -476,4 +476,11 @@ PK$ANNOTATION: m/z tentative_formula formula_count mass error(ppm)
 		}
 		return list.toArray(new String[0]);
 	}
+	public static AccessionData getAccessionDataFromDatabase(String accessionId, String databaseName){
+		DatabaseManager dbManager	= new DatabaseManager(databaseName);
+		AccessionData accessionData	= dbManager.getAccessionData(accessionId);
+		dbManager.closeConnection();
+		
+		return accessionData;
+	}
 }
