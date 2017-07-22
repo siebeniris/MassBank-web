@@ -20,6 +20,15 @@ CREATE TABLE PEAK (
 );
 
 --
+-- View structure for view 'PK_NUM'
+--
+DROP VIEW IF EXISTS PK_NUM;					-- add
+CREATE VIEW PK_NUM AS 						-- add
+	SELECT ID, count(ID) AS PK$NUM_PEAK 	-- add
+	FROM PEAK 								-- add
+	GROUP BY ID;							-- add
+
+--
 -- Table structure for table `SPECTRUM`
 --
 DROP TABLE IF EXISTS SPECTRUM;
@@ -132,9 +141,20 @@ CREATE TABLE INSTRUMENT (
 --
 DROP TABLE IF EXISTS AC_MASS_SPECTROMETRY;      -- add
 CREATE TABLE AC_MASS_SPECTROMETRY (             -- add
-	ID              CHAR(8)      NOT NULL,  -- add
-	NAME            VARCHAR(255) NOT NULL,  -- add
-	INDEX(ID, NAME)                         -- add
+	ID              		CHAR(8)      NOT NULL,  -- add
+	NAME            		VARCHAR(255) NOT NULL,  -- add
+	-- COLLISION_ENERGY 		VARCHAR(255),			-- add
+	-- COLLISION_GAS 			VARCHAR(255),			-- add
+	-- DATE 					VARCHAR(255),			-- add
+	-- DESOLVATION_GAS_FLOW 	VARCHAR(255),			-- add
+	-- DESOLVATION_TEMPERATURE VARCHAR(255),			-- add
+	-- IONIZATION_ENERGY 		VARCHAR(255),			-- add
+	-- LASER 					VARCHAR(255),			-- add
+	-- MATRIX 					VARCHAR(255),			-- add
+	-- MASS_ACCURACY 			VARCHAR(255),			-- add
+	-- REAGENT_GAS 			VARCHAR(255),			-- add
+	-- SCANNING 				VARCHAR(255),			-- add
+	INDEX(ID, NAME)                         		-- add
 );
 
 --
@@ -142,8 +162,16 @@ CREATE TABLE AC_MASS_SPECTROMETRY (             -- add
 --
 DROP TABLE IF EXISTS AC_CHROMATOGRAPHY;         -- add
 CREATE TABLE AC_CHROMATOGRAPHY (                -- add
-	ID              CHAR(8)      NOT NULL,  -- add
-	NAME            VARCHAR(255) NOT NULL,  -- add
+	ID              	CHAR(8)      NOT NULL,  -- add
+	NAME            	VARCHAR(255) NOT NULL,  -- add
+	-- CAPILLARY_VOLTAGE	VARCHAR(255),			-- add
+	-- COLUMN_NAME			VARCHAR(255),			-- add
+	-- COLUMN_TEMPERATURE	VARCHAR(255),			-- add
+	-- FLOW_GRADIENT		VARCHAR(255),			-- add
+	-- FLOW_RATE			VARCHAR(255),			-- add
+	-- RETENTION_TIME		VARCHAR(255),			-- add
+	-- SOLVENT				VARCHAR(255),			-- add
+	-- NAPS_RTI			VARCHAR(255), 			-- add
 	INDEX(ID, NAME)                         -- add
 );
 
@@ -154,6 +182,13 @@ DROP TABLE IF EXISTS MS_FOCUSED_ION;            -- add
 CREATE TABLE MS_FOCUSED_ION (                   -- add
 	ID              CHAR(8)      NOT NULL,  -- add
 	NAME            VARCHAR(255) NOT NULL,  -- add
+	-- BASE_PEAK		VARCHAR(255),			-- add
+	-- DERIVATIVE_FORM	VARCHAR(255),			-- add
+	-- DERIVATIVE_MASS	VARCHAR(255),			-- add
+	-- DERIVATIVE_TYPE	VARCHAR(255),			-- add
+	-- ION_TYPE		VARCHAR(255),			-- add
+	-- PRECURSOR_MZ	VARCHAR(255),			-- add
+	-- PRECURSOR_TYPE	VARCHAR(255),			-- add
 	INDEX(ID, NAME)                         -- add
 );
 
@@ -164,6 +199,8 @@ DROP TABLE IF EXISTS MS_DATA_PROCESSING;        -- add
 CREATE TABLE MS_DATA_PROCESSING (               -- add
 	ID              CHAR(8)      NOT NULL,  -- add
 	NAME            VARCHAR(255) NOT NULL,  -- add
+	-- FIND_PEAK		VARCHAR(255),			-- add
+	-- WHOLE			VARCHAR(255),			-- add
 	INDEX(ID, NAME)                         -- add
 );
 
@@ -176,6 +213,30 @@ CREATE TABLE MS_DATA_PROCESSING (               -- add
 -- 	NAME              VARCHAR(100)      NOT NULL,
 -- 	UNIQUE(NAME,FILE)
 -- );
+
+--
+-- Table structure for table `BIOLOGICAL_SAMPLE`
+--
+DROP TABLE IF EXISTS BIOLOGICAL_SAMPLE;		-- add
+CREATE TABLE BIOLOGICAL_SAMPLE (			-- add
+	ID              CHAR(8)      NOT NULL,	-- add
+	SCIENTIFIC_NAME VARCHAR(255),			-- add
+	LINEAGE			VARCHAR(255),			-- add
+	SAMPLE 			VARCHAR(255),			-- add
+	INDEX(ID)								-- add
+);											-- add
+
+--
+-- Table structure for table `SP_LINK`
+--
+DROP TABLE IF EXISTS SP_LINK;				-- add
+CREATE TABLE SP_LINK (						-- add
+	ID              CHAR(8)      NOT NULL,	-- add
+	LINK_NAME       VARCHAR(100) NOT NULL,	-- add
+	LINK_ID         VARCHAR(100) NOT NULL,	-- add
+	UNIQUE(ID,LINK_NAME,LINK_ID),			-- add
+	INDEX(ID)								-- add
+);											-- add
 
 -- SPECTRUM Table Data
 INSERT INTO `SPECTRUM` VALUES ('XXX00001','GABA; LC-ESI-QQ; MS2; CE:10 V; [M-H]-',-1,102);
