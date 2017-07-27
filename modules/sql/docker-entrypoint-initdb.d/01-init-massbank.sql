@@ -3,10 +3,52 @@ CREATE DATABASE MassBank CHARACTER SET = 'latin1';
 USE MassBank;
 
 --
+-- Table structure for table `INSTRUMENT`
+--
+DROP TABLE IF EXISTS INSTRUMENT;
+CREATE TABLE INSTRUMENT (
+	INSTRUMENT_NO      TINYINT UNSIGNED NOT NULL,
+	INSTRUMENT_TYPE    VARCHAR(50)      NOT NULL,
+	INSTRUMENT_NAME    VARCHAR(200)     NOT NULL,
+	PRIMARY KEY(INSTRUMENT_NO)
+);
+
+--
+-- Table structure for table `RECORD`
+--
+DROP TABLE IF EXISTS RECORD;
+CREATE TABLE RECORD (
+	ID            CHAR(8) 			NOT NULL,
+	-- general information
+	RECORD_TITLE  VARCHAR(255) 		NOT NULL,	-- add
+	DATE          DATE 				NOT NULL,
+	AUTHORS       VARCHAR(255)		NOT NULL,	-- add
+	LICENSE       VARCHAR(255)		NOT NULL,	-- add
+	COPYRIGHT     VARCHAR(255),     			-- add
+	PUBLICATION   VARCHAR(255),     			-- add
+	-- structure information
+	FORMULA       VARCHAR(255)		NOT NULL,	-- mod size
+	EXACT_MASS    DOUBLE			NOT NULL,
+	INSTRUMENT_NO TINYINT UNSIGNED	NOT NULL,
+	-- miscellaneous
+	PK_SPLASH     VARCHAR(255)		NOT NULL,	-- add
+	SMILES        TEXT,
+	IUPAC         TEXT,
+	MS_TYPE       VARCHAR(8)		NOT NULL,
+	-- table setup
+	PRIMARY KEY(ID),
+	FOREIGN KEY (INSTRUMENT_NO)					-- add
+		REFERENCES INSTRUMENT(INSTRUMENT_NO)	-- add
+		ON DELETE NO ACTION						-- add
+		ON UPDATE CASCADE,						-- add
+	INDEX(RECORD_TITLE, AUTHORS, FORMULA, EXACT_MASS, INSTRUMENT_NO, MS_TYPE) -- mod
+);
+
+--
 -- Table structure for table `PEAK`
 --
 DROP TABLE IF EXISTS PEAK;
-CREATE TABLE PEAK (
+CREATE TABLE PEAK (					-- table can be removed it's info will be contained in table MS_FOCUSED_ION
 	ID          CHAR(8)  NOT NULL,
 	MZ          DOUBLE   NOT NULL,
 	INTENSITY   FLOAT    NOT NULL,
@@ -16,7 +58,11 @@ CREATE TABLE PEAK (
 	-- FORMULA_COUNT     SMALLINT,     -- add
 	-- THEORETICAL_MASS  FLOAT,        -- add
 	-- ERROR_PPM         FLOAT         -- add
-	UNIQUE(ID,MZ)
+	PRIMARY KEY (ID,MZ),				-- modiefied form UNIQUE
+	FOREIGN KEY (ID)					-- add
+		REFERENCES RECORD(ID)			-- add
+		ON DELETE CASCADE				-- add
+		ON UPDATE CASCADE				-- add
 );
 
 --
@@ -37,7 +83,11 @@ CREATE TABLE SPECTRUM (
 	NAME        VARCHAR(255) NOT NULL,
 	ION         TINYINT      NOT NULL,
 	PRECURSOR_MZ SMALLINT UNSIGNED,
-	PRIMARY KEY(ID)
+	PRIMARY KEY (ID),
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 --
@@ -52,56 +102,41 @@ CREATE TABLE TREE (
 	INFO        VARCHAR(255)      NOT NULL, -- mod size
 	ID          CHAR(8),
 	INDEX(PARENT),
-	INDEX(ID)
-);
-
---
--- Table structure for table `RECORD`
---
-DROP TABLE IF EXISTS RECORD;
-CREATE TABLE RECORD (
-	ID            CHAR(8) NOT NULL,
-	-- general information
-	RECORD_TITLE  VARCHAR(255),     -- add
-	DATE          DATE,
-	AUTHORS       VARCHAR(255),     -- add
-	LICENSE       VARCHAR(255),     -- add
-	COPYRIGHT     VARCHAR(255),     -- add
-	PUBLICATION   VARCHAR(255),     -- add
-	-- structure information
-	FORMULA       VARCHAR(255),     -- mod size
-	EXACT_MASS    DOUBLE,
-	INSTRUMENT_NO TINYINT UNSIGNED,
-	-- miscellaneous
-	PK_SPLASH     VARCHAR(255),     -- add
-	SMILES        TEXT,
-	IUPAC         TEXT,
-	MS_TYPE       VARCHAR(8),
-	-- table setup
-	PRIMARY KEY(ID),
-	INDEX(RECORD_TITLE, AUTHORS, FORMULA, EXACT_MASS, INSTRUMENT_NO, MS_TYPE) -- mod
+	INDEX(ID), 
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 --
 -- Table structure for table `COMMENT`
 --
-DROP TABLE IF EXISTS COMMENT;                   -- add
-CREATE TABLE COMMENT (                          -- add
+DROP TABLE IF EXISTS COMMENT;               -- add
+CREATE TABLE COMMENT (                      -- add
 	ID              CHAR(8)      NOT NULL,  -- add
 	NAME            VARCHAR(255) NOT NULL,  -- add
-	INDEX(ID, NAME)                         -- add
-);                                              -- add
+	PRIMARY KEY (ID, NAME),                 -- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
+);                                          -- add
 
 --
 -- Table structure for table `CH_COMPOUND_CLASS`
 --
-DROP TABLE IF EXISTS CH_COMPOUND_CLASS;         -- add
-CREATE TABLE CH_COMPOUND_CLASS (                -- add
+DROP TABLE IF EXISTS CH_COMPOUND_CLASS;     -- add
+CREATE TABLE CH_COMPOUND_CLASS (            -- add
 	ID              CHAR(8)       NOT NULL, -- add
 	CLASS           VARCHAR(255),           -- add
 	NAME            TEXT          NOT NULL, -- add
-	INDEX(ID, CLASS)                        -- add
-);                                              -- add
+	PRIMARY KEY (ID, CLASS),                -- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
+);                                          -- add
 
 --
 -- Table structure for table `CH_NAME`
@@ -110,7 +145,11 @@ DROP TABLE IF EXISTS CH_NAME;
 CREATE TABLE CH_NAME (
 	ID              CHAR(8)      NOT NULL,
 	NAME            VARCHAR(255) NOT NULL,  -- mod size
-	INDEX(ID, NAME)                         -- mod
+	PRIMARY KEY (ID, NAME),                 -- mod, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 --
@@ -122,39 +161,36 @@ CREATE TABLE CH_LINK (
 	LINK_NAME       VARCHAR(100) NOT NULL,
 	LINK_ID         VARCHAR(100) NOT NULL,
 	UNIQUE(ID,LINK_NAME,LINK_ID),
-	INDEX(ID)
-);
-
---
--- Table structure for table `INSTRUMENT`
---
-DROP TABLE IF EXISTS INSTRUMENT;
-CREATE TABLE INSTRUMENT (
-	INSTRUMENT_NO      TINYINT UNSIGNED NOT NULL,
-	INSTRUMENT_TYPE    VARCHAR(50)      NOT NULL,
-	INSTRUMENT_NAME    VARCHAR(200)     NOT NULL,
-	PRIMARY KEY(INSTRUMENT_NO)
+	PRIMARY KEY (ID, LINK_NAME),			-- changed from INDEX (ID) -> PRIMARY KEY (ID, LINK_NAME) (recrod can have multiple links)
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 --
 -- Table structure for table `AC_MASS_SPECTROMETRY`
 --
-DROP TABLE IF EXISTS AC_MASS_SPECTROMETRY;      -- add
-CREATE TABLE AC_MASS_SPECTROMETRY (             -- add
+DROP TABLE IF EXISTS AC_MASS_SPECTROMETRY;      	-- add
+CREATE TABLE AC_MASS_SPECTROMETRY (             	-- add
 	ID              		CHAR(8)      NOT NULL,  -- add
 	NAME            		VARCHAR(255) NOT NULL,  -- add
-	-- COLLISION_ENERGY 		VARCHAR(255),			-- add
-	-- COLLISION_GAS 			VARCHAR(255),			-- add
-	-- DATE 					VARCHAR(255),			-- add
-	-- DESOLVATION_GAS_FLOW 	VARCHAR(255),			-- add
-	-- DESOLVATION_TEMPERATURE VARCHAR(255),			-- add
-	-- IONIZATION_ENERGY 		VARCHAR(255),			-- add
-	-- LASER 					VARCHAR(255),			-- add
-	-- MATRIX 					VARCHAR(255),			-- add
-	-- MASS_ACCURACY 			VARCHAR(255),			-- add
-	-- REAGENT_GAS 			VARCHAR(255),			-- add
-	-- SCANNING 				VARCHAR(255),			-- add
-	INDEX(ID, NAME)                         		-- add
+	-- COLLISION_ENERGY 		VARCHAR(255),		-- add
+	-- COLLISION_GAS 			VARCHAR(255),		-- add
+	-- DATE 					VARCHAR(255),		-- add
+	-- DESOLVATION_GAS_FLOW 	VARCHAR(255),		-- add
+	-- DESOLVATION_TEMPERATURE VARCHAR(255),		-- add
+	-- IONIZATION_ENERGY 		VARCHAR(255),		-- add
+	-- LASER 					VARCHAR(255),		-- add
+	-- MATRIX 					VARCHAR(255),		-- add
+	-- MASS_ACCURACY 			VARCHAR(255),		-- add
+	-- REAGENT_GAS 				VARCHAR(255),		-- add
+	-- SCANNING 				VARCHAR(255),		-- add
+	PRIMARY KEY (ID, NAME),							-- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)								-- add
+		REFERENCES RECORD(ID)						-- add
+		ON DELETE CASCADE							-- add
+		ON UPDATE CASCADE							-- add
 );
 
 --
@@ -164,44 +200,56 @@ DROP TABLE IF EXISTS AC_CHROMATOGRAPHY;         -- add
 CREATE TABLE AC_CHROMATOGRAPHY (                -- add
 	ID              	CHAR(8)      NOT NULL,  -- add
 	NAME            	VARCHAR(255) NOT NULL,  -- add
-	-- CAPILLARY_VOLTAGE	VARCHAR(255),			-- add
-	-- COLUMN_NAME			VARCHAR(255),			-- add
-	-- COLUMN_TEMPERATURE	VARCHAR(255),			-- add
-	-- FLOW_GRADIENT		VARCHAR(255),			-- add
-	-- FLOW_RATE			VARCHAR(255),			-- add
-	-- RETENTION_TIME		VARCHAR(255),			-- add
-	-- SOLVENT				VARCHAR(255),			-- add
+	-- CAPILLARY_VOLTAGE	VARCHAR(255),		-- add
+	-- COLUMN_NAME			VARCHAR(255),		-- add
+	-- COLUMN_TEMPERATURE	VARCHAR(255),		-- add
+	-- FLOW_GRADIENT		VARCHAR(255),		-- add
+	-- FLOW_RATE			VARCHAR(255),		-- add
+	-- RETENTION_TIME		VARCHAR(255),		-- add
+	-- SOLVENT				VARCHAR(255),		-- add
 	-- NAPS_RTI			VARCHAR(255), 			-- add
-	INDEX(ID, NAME)                         -- add
+	PRIMARY KEY (ID, NAME),						-- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)							-- add
+		REFERENCES RECORD(ID)					-- add
+		ON DELETE CASCADE						-- add
+		ON UPDATE CASCADE						-- add
 );
 
 --
 -- Table structure for table `MS_FOCUSED_ION`
 --
-DROP TABLE IF EXISTS MS_FOCUSED_ION;            -- add
-CREATE TABLE MS_FOCUSED_ION (                   -- add
+DROP TABLE IF EXISTS MS_FOCUSED_ION;        -- add
+CREATE TABLE MS_FOCUSED_ION (               -- add
 	ID              CHAR(8)      NOT NULL,  -- add
 	NAME            VARCHAR(255) NOT NULL,  -- add
-	-- BASE_PEAK		VARCHAR(255),			-- add
-	-- DERIVATIVE_FORM	VARCHAR(255),			-- add
-	-- DERIVATIVE_MASS	VARCHAR(255),			-- add
-	-- DERIVATIVE_TYPE	VARCHAR(255),			-- add
+	-- BASE_PEAK		VARCHAR(255),		-- add
+	-- DERIVATIVE_FORM	VARCHAR(255),		-- add
+	-- DERIVATIVE_MASS	VARCHAR(255),		-- add
+	-- DERIVATIVE_TYPE	VARCHAR(255),		-- add
 	-- ION_TYPE		VARCHAR(255),			-- add
 	-- PRECURSOR_MZ	VARCHAR(255),			-- add
-	-- PRECURSOR_TYPE	VARCHAR(255),			-- add
-	INDEX(ID, NAME)                         -- add
+	-- PRECURSOR_TYPE	VARCHAR(255),		-- add
+	PRIMARY KEY (ID, NAME),					-- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 --
 -- Table structure for table `MS_DATA_PROCESSING`
 --
-DROP TABLE IF EXISTS MS_DATA_PROCESSING;        -- add
-CREATE TABLE MS_DATA_PROCESSING (               -- add
+DROP TABLE IF EXISTS MS_DATA_PROCESSING;    -- add
+CREATE TABLE MS_DATA_PROCESSING (           -- add
 	ID              CHAR(8)      NOT NULL,  -- add
 	NAME            VARCHAR(255) NOT NULL,  -- add
-	-- FIND_PEAK		VARCHAR(255),			-- add
-	-- WHOLE			VARCHAR(255),			-- add
-	INDEX(ID, NAME)                         -- add
+	-- FIND_PEAK		VARCHAR(255),		-- add
+	-- WHOLE			VARCHAR(255),		-- add
+	PRIMARY KEY (ID, NAME),					-- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 -- 
@@ -223,7 +271,12 @@ CREATE TABLE BIOLOGICAL_SAMPLE (			-- add
 	SCIENTIFIC_NAME VARCHAR(255),			-- add
 	LINEAGE			VARCHAR(255),			-- add
 	SAMPLE 			VARCHAR(255),			-- add
-	INDEX(ID)								-- add
+	INDEX(ID),								-- add
+	PRIMARY KEY (ID),						-- add						
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );											-- add
 
 --
@@ -235,14 +288,15 @@ CREATE TABLE SP_LINK (						-- add
 	LINK_NAME       VARCHAR(100) NOT NULL,	-- add
 	LINK_ID         VARCHAR(100) NOT NULL,	-- add
 	UNIQUE(ID,LINK_NAME,LINK_ID),			-- add
-	INDEX(ID)								-- add
+	PRIMARY KEY(ID),						-- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );											-- add
 
--- SPECTRUM Table Data
-INSERT INTO `SPECTRUM` VALUES ('XXX00001','GABA; LC-ESI-QQ; MS2; CE:10 V; [M-H]-',-1,102);
-
--- PEAK Table Data
-INSERT INTO `PEAK` VALUES ('XXX00001',58.5,39604,1),('XXX00001',73.2,14851.5,1),('XXX00001',83.9,975248,16),('XXX00001',101.3,103960,2),('XXX00001',102,5.93961e+07,999);
+-- INSTRUMENT Table Data
+INSERT INTO `INSTRUMENT` VALUES (1,'LC-ESI-QQ','API3000, Applied Biosystems');
 
 -- RECORD Table Data
 INSERT INTO `RECORD` VALUES (
@@ -250,6 +304,12 @@ INSERT INTO `RECORD` VALUES (
 	'C4H9NO2',103.06333,1,
 	'splash10-0udi-0900000000-1d00adad47e42c60c340', 'NCCCC(O)=O','InChI=1S/C4H9NO2/c5-3-1-2-4(6)7/h1-3,5H2,(H,6,7)','MS2'
 );
+
+-- SPECTRUM Table Data
+INSERT INTO `SPECTRUM` VALUES ('XXX00001','GABA; LC-ESI-QQ; MS2; CE:10 V; [M-H]-',-1,102);
+
+-- PEAK Table Data
+INSERT INTO `PEAK` VALUES ('XXX00001',58.5,39604,1),('XXX00001',73.2,14851.5,1),('XXX00001',83.9,975248,16),('XXX00001',101.3,103960,2),('XXX00001',102,5.93961e+07,999);
 
 -- COMMENT Table Data
 INSERT INTO `COMMENT` VALUES ('XXX00001','KEIO_ID A002');
@@ -274,9 +334,6 @@ INSERT INTO `MS_FOCUSED_ION` VALUES ('XXX00001','BASE_PEAK 102'),('XXX00001','PR
 
 -- MS_DATA_PROCESSING Table Data
 INSERT INTO `MS_DATA_PROCESSING` VALUES ('XXX00001','DEPROFILE Spline'),('XXX00001','RECALIBRATE loess on assigned fragments and MS1'),('XXX00001','REANALYZE Peaks with additional N2/O included'),('XXX00001','WHOLE RMassBank 1.3.1');
-
--- INSTRUMENT Table Data
-INSERT INTO `INSTRUMENT` VALUES (1,'LC-ESI-QQ','API3000, Applied Biosystems');
 
 -- TREE Table Data
 INSERT INTO `TREE` VALUES (1,0,1,1,'MassBank',NULL),(619,1,1,1,'LC-ESI-QQ',NULL),(1071,619,1,1,'MW 103',NULL),(1072,1071,1,1,'C4H9NO2',NULL),(1096,1072,1,1,'GABA',NULL),(1103,1096,1,1,'[M-H]-',NULL),(1104,1103,1,-1,'MS2  /  10 V','XXX00001');

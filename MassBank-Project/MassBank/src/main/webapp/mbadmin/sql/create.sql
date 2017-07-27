@@ -2,6 +2,48 @@ CREATE DATABASE `SAMPLE_DB` CHARACTER SET = 'latin1';
 USE `SAMPLE_DB`;
 
 --
+-- Table structure for table `INSTRUMENT`
+--
+DROP TABLE IF EXISTS INSTRUMENT;
+CREATE TABLE INSTRUMENT (
+	INSTRUMENT_NO      TINYINT UNSIGNED NOT NULL,
+	INSTRUMENT_TYPE    VARCHAR(50)      NOT NULL,
+	INSTRUMENT_NAME    VARCHAR(200)     NOT NULL,
+	PRIMARY KEY(INSTRUMENT_NO)
+);
+
+--
+-- Table structure for table `RECORD`
+--
+DROP TABLE IF EXISTS RECORD;
+CREATE TABLE RECORD (
+	ID            CHAR(8) 			NOT NULL,
+	-- general information
+	RECORD_TITLE  VARCHAR(255) 		NOT NULL,	-- add
+	DATE          DATE 				NOT NULL,
+	AUTHORS       VARCHAR(255)		NOT NULL,	-- add
+	LICENSE       VARCHAR(255)		NOT NULL,	-- add
+	COPYRIGHT     VARCHAR(255),     			-- add
+	PUBLICATION   VARCHAR(255),     			-- add
+	-- structure information
+	FORMULA       VARCHAR(255)		NOT NULL,	-- mod size
+	EXACT_MASS    DOUBLE			NOT NULL,
+	INSTRUMENT_NO TINYINT UNSIGNED	NOT NULL,
+	-- miscellaneous
+	PK_SPLASH     VARCHAR(255)		NOT NULL,	-- add
+	SMILES        TEXT,
+	IUPAC         TEXT,
+	MS_TYPE       VARCHAR(8)		NOT NULL,
+	-- table setup
+	PRIMARY KEY(ID),
+	FOREIGN KEY (INSTRUMENT_NO)					-- add
+		REFERENCES INSTRUMENT(INSTRUMENT_NO)	-- add
+		ON DELETE NO ACTION						-- add
+		ON UPDATE CASCADE,						-- add
+	INDEX(RECORD_TITLE, AUTHORS, FORMULA, EXACT_MASS, INSTRUMENT_NO, MS_TYPE) -- mod
+);
+
+--
 -- Table structure for table `PEAK`
 --
 DROP TABLE IF EXISTS PEAK;
@@ -15,7 +57,11 @@ CREATE TABLE PEAK (
 	-- FORMULA_COUNT     SMALLINT,     -- add
 	-- THEORETICAL_MASS  FLOAT,        -- add
 	-- ERROR_PPM         FLOAT         -- add
-	UNIQUE(ID,MZ)
+	PRIMARY KEY (ID,MZ),				-- modiefied form UNIQUE
+	FOREIGN KEY (ID)					-- add
+		REFERENCES RECORD(ID)			-- add
+		ON DELETE CASCADE				-- add
+		ON UPDATE CASCADE				-- add
 );
 
 --
@@ -36,7 +82,11 @@ CREATE TABLE SPECTRUM (
 	NAME        VARCHAR(255) NOT NULL,
 	ION         TINYINT      NOT NULL,
 	PRECURSOR_MZ SMALLINT UNSIGNED,
-	PRIMARY KEY(ID)
+	PRIMARY KEY (ID),
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 --
@@ -51,56 +101,41 @@ CREATE TABLE TREE (
 	INFO        VARCHAR(255)      NOT NULL, -- mod size
 	ID          CHAR(8),
 	INDEX(PARENT),
-	INDEX(ID)
-);
-
---
--- Table structure for table `RECORD`
---
-DROP TABLE IF EXISTS RECORD;
-CREATE TABLE RECORD (
-	ID            CHAR(8) NOT NULL,
-	-- general information
-	RECORD_TITLE  VARCHAR(255),     -- add
-	DATE          DATE,
-	AUTHORS       VARCHAR(255),     -- add
-	LICENSE       VARCHAR(255),     -- add
-	COPYRIGHT     VARCHAR(255),     -- add
-	PUBLICATION   VARCHAR(255),     -- add
-	-- structure information
-	FORMULA       VARCHAR(255),     -- mod size
-	EXACT_MASS    DOUBLE,
-	INSTRUMENT_NO TINYINT UNSIGNED,
-	-- miscellaneous
-	PK_SPLASH     VARCHAR(255),     -- add
-	SMILES        TEXT,
-	IUPAC         TEXT,
-	MS_TYPE       VARCHAR(8),
-	-- table setup
-	PRIMARY KEY(ID),
-	INDEX(RECORD_TITLE, AUTHORS, FORMULA, EXACT_MASS, INSTRUMENT_NO, MS_TYPE) -- mod
+	INDEX(ID), 
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 --
 -- Table structure for table `COMMENT`
 --
-DROP TABLE IF EXISTS COMMENT;                   -- add
-CREATE TABLE COMMENT (                          -- add
+DROP TABLE IF EXISTS COMMENT;               -- add
+CREATE TABLE COMMENT (                      -- add
 	ID              CHAR(8)      NOT NULL,  -- add
 	NAME            VARCHAR(255) NOT NULL,  -- add
-	INDEX(ID, NAME)                         -- add
-);                                              -- add
+	PRIMARY KEY (ID, NAME),                 -- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
+);                                          -- add
 
 --
 -- Table structure for table `CH_COMPOUND_CLASS`
 --
-DROP TABLE IF EXISTS CH_COMPOUND_CLASS;         -- add
-CREATE TABLE CH_COMPOUND_CLASS (                -- add
+DROP TABLE IF EXISTS CH_COMPOUND_CLASS;     -- add
+CREATE TABLE CH_COMPOUND_CLASS (            -- add
 	ID              CHAR(8)       NOT NULL, -- add
 	CLASS           VARCHAR(255),           -- add
 	NAME            TEXT          NOT NULL, -- add
-	INDEX(ID, CLASS)                        -- add
-);                                              -- add
+	PRIMARY KEY (ID, CLASS),                -- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
+);                                          -- add
 
 --
 -- Table structure for table `CH_NAME`
@@ -109,7 +144,11 @@ DROP TABLE IF EXISTS CH_NAME;
 CREATE TABLE CH_NAME (
 	ID              CHAR(8)      NOT NULL,
 	NAME            VARCHAR(255) NOT NULL,  -- mod size
-	INDEX(ID, NAME)                         -- mod
+	PRIMARY KEY (ID, NAME),                 -- mod, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 --
@@ -121,39 +160,36 @@ CREATE TABLE CH_LINK (
 	LINK_NAME       VARCHAR(100) NOT NULL,
 	LINK_ID         VARCHAR(100) NOT NULL,
 	UNIQUE(ID,LINK_NAME,LINK_ID),
-	INDEX(ID)
-);
-
---
--- Table structure for table `INSTRUMENT`
---
-DROP TABLE IF EXISTS INSTRUMENT;
-CREATE TABLE INSTRUMENT (
-	INSTRUMENT_NO      TINYINT UNSIGNED NOT NULL,
-	INSTRUMENT_TYPE    VARCHAR(50)      NOT NULL,
-	INSTRUMENT_NAME    VARCHAR(200)     NOT NULL,
-	PRIMARY KEY(INSTRUMENT_NO)
+	PRIMARY KEY (ID, LINK_NAME),			-- changed from INDEX (ID) -> PRIMARY KEY (ID, LINK_NAME) (recrod can have multiple links)
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 --
 -- Table structure for table `AC_MASS_SPECTROMETRY`
 --
-DROP TABLE IF EXISTS AC_MASS_SPECTROMETRY;      -- add
-CREATE TABLE AC_MASS_SPECTROMETRY (             -- add
+DROP TABLE IF EXISTS AC_MASS_SPECTROMETRY;      	-- add
+CREATE TABLE AC_MASS_SPECTROMETRY (             	-- add
 	ID              		CHAR(8)      NOT NULL,  -- add
 	NAME            		VARCHAR(255) NOT NULL,  -- add
-	-- COLLISION_ENERGY 		VARCHAR(255),			-- add
-	-- COLLISION_GAS 			VARCHAR(255),			-- add
-	-- DATE 					VARCHAR(255),			-- add
-	-- DESOLVATION_GAS_FLOW 	VARCHAR(255),			-- add
-	-- DESOLVATION_TEMPERATURE VARCHAR(255),			-- add
-	-- IONIZATION_ENERGY 		VARCHAR(255),			-- add
-	-- LASER 					VARCHAR(255),			-- add
-	-- MATRIX 					VARCHAR(255),			-- add
-	-- MASS_ACCURACY 			VARCHAR(255),			-- add
-	-- REAGENT_GAS 			VARCHAR(255),			-- add
-	-- SCANNING 				VARCHAR(255),			-- add
-	INDEX(ID, NAME)                         		-- add
+	-- COLLISION_ENERGY 		VARCHAR(255),		-- add
+	-- COLLISION_GAS 			VARCHAR(255),		-- add
+	-- DATE 					VARCHAR(255),		-- add
+	-- DESOLVATION_GAS_FLOW 	VARCHAR(255),		-- add
+	-- DESOLVATION_TEMPERATURE VARCHAR(255),		-- add
+	-- IONIZATION_ENERGY 		VARCHAR(255),		-- add
+	-- LASER 					VARCHAR(255),		-- add
+	-- MATRIX 					VARCHAR(255),		-- add
+	-- MASS_ACCURACY 			VARCHAR(255),		-- add
+	-- REAGENT_GAS 				VARCHAR(255),		-- add
+	-- SCANNING 				VARCHAR(255),		-- add
+	PRIMARY KEY (ID, NAME),							-- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)								-- add
+		REFERENCES RECORD(ID)						-- add
+		ON DELETE CASCADE							-- add
+		ON UPDATE CASCADE							-- add
 );
 
 --
@@ -163,44 +199,56 @@ DROP TABLE IF EXISTS AC_CHROMATOGRAPHY;         -- add
 CREATE TABLE AC_CHROMATOGRAPHY (                -- add
 	ID              	CHAR(8)      NOT NULL,  -- add
 	NAME            	VARCHAR(255) NOT NULL,  -- add
-	-- CAPILLARY_VOLTAGE	VARCHAR(255),			-- add
-	-- COLUMN_NAME			VARCHAR(255),			-- add
-	-- COLUMN_TEMPERATURE	VARCHAR(255),			-- add
-	-- FLOW_GRADIENT		VARCHAR(255),			-- add
-	-- FLOW_RATE			VARCHAR(255),			-- add
-	-- RETENTION_TIME		VARCHAR(255),			-- add
-	-- SOLVENT				VARCHAR(255),			-- add
+	-- CAPILLARY_VOLTAGE	VARCHAR(255),		-- add
+	-- COLUMN_NAME			VARCHAR(255),		-- add
+	-- COLUMN_TEMPERATURE	VARCHAR(255),		-- add
+	-- FLOW_GRADIENT		VARCHAR(255),		-- add
+	-- FLOW_RATE			VARCHAR(255),		-- add
+	-- RETENTION_TIME		VARCHAR(255),		-- add
+	-- SOLVENT				VARCHAR(255),		-- add
 	-- NAPS_RTI			VARCHAR(255), 			-- add
-	INDEX(ID, NAME)                         -- add
+	PRIMARY KEY (ID, NAME),						-- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)							-- add
+		REFERENCES RECORD(ID)					-- add
+		ON DELETE CASCADE						-- add
+		ON UPDATE CASCADE						-- add
 );
 
 --
 -- Table structure for table `MS_FOCUSED_ION`
 --
-DROP TABLE IF EXISTS MS_FOCUSED_ION;            -- add
-CREATE TABLE MS_FOCUSED_ION (                   -- add
+DROP TABLE IF EXISTS MS_FOCUSED_ION;        -- add
+CREATE TABLE MS_FOCUSED_ION (               -- add
 	ID              CHAR(8)      NOT NULL,  -- add
 	NAME            VARCHAR(255) NOT NULL,  -- add
-	-- BASE_PEAK		VARCHAR(255),			-- add
-	-- DERIVATIVE_FORM	VARCHAR(255),			-- add
-	-- DERIVATIVE_MASS	VARCHAR(255),			-- add
-	-- DERIVATIVE_TYPE	VARCHAR(255),			-- add
+	-- BASE_PEAK		VARCHAR(255),		-- add
+	-- DERIVATIVE_FORM	VARCHAR(255),		-- add
+	-- DERIVATIVE_MASS	VARCHAR(255),		-- add
+	-- DERIVATIVE_TYPE	VARCHAR(255),		-- add
 	-- ION_TYPE		VARCHAR(255),			-- add
 	-- PRECURSOR_MZ	VARCHAR(255),			-- add
-	-- PRECURSOR_TYPE	VARCHAR(255),			-- add
-	INDEX(ID, NAME)                         -- add
+	-- PRECURSOR_TYPE	VARCHAR(255),		-- add
+	PRIMARY KEY (ID, NAME),					-- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 --
 -- Table structure for table `MS_DATA_PROCESSING`
 --
-DROP TABLE IF EXISTS MS_DATA_PROCESSING;        -- add
-CREATE TABLE MS_DATA_PROCESSING (               -- add
+DROP TABLE IF EXISTS MS_DATA_PROCESSING;    -- add
+CREATE TABLE MS_DATA_PROCESSING (           -- add
 	ID              CHAR(8)      NOT NULL,  -- add
 	NAME            VARCHAR(255) NOT NULL,  -- add
-	-- FIND_PEAK		VARCHAR(255),			-- add
-	-- WHOLE			VARCHAR(255),			-- add
-	INDEX(ID, NAME)                         -- add
+	-- FIND_PEAK		VARCHAR(255),		-- add
+	-- WHOLE			VARCHAR(255),		-- add
+	PRIMARY KEY (ID, NAME),					-- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );
 
 -- 
@@ -222,7 +270,12 @@ CREATE TABLE BIOLOGICAL_SAMPLE (			-- add
 	SCIENTIFIC_NAME VARCHAR(255),			-- add
 	LINEAGE			VARCHAR(255),			-- add
 	SAMPLE 			VARCHAR(255),			-- add
-	INDEX(ID)								-- add
+	INDEX(ID),								-- add
+	PRIMARY KEY (ID),						-- add						
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );											-- add
 
 --
@@ -234,7 +287,11 @@ CREATE TABLE SP_LINK (						-- add
 	LINK_NAME       VARCHAR(100) NOT NULL,	-- add
 	LINK_ID         VARCHAR(100) NOT NULL,	-- add
 	UNIQUE(ID,LINK_NAME,LINK_ID),			-- add
-	INDEX(ID)								-- add
+	PRIMARY KEY(ID),						-- add, changed from INDEX -> PRIMARY KEY
+	FOREIGN KEY (ID)						-- add
+		REFERENCES RECORD(ID)				-- add
+		ON DELETE CASCADE					-- add
+		ON UPDATE CASCADE					-- add
 );											-- add
 
 GRANT ALL PRIVILEGES ON *.* TO bird IDENTIFIED BY 'bird2006' WITH GRANT OPTION;
