@@ -31,65 +31,43 @@
 <%@ page import="massbank.StructureToSvgStringGenerator" %>
 <%@ page import="massbank.StructureToSvgStringGenerator.ClickablePreviewImageData" %>
 <%
-	// ##################################################################################################
-	// get parameters
-	// http://localhost/MassBank/jsp/RecordDisplay.jsp?id=XXX00001&dsn=MassBank
-	//String accession	= "XXX00001";
-	//String database	= "MassBank";
-	String accession		= null;
-	String databaseName		= null;
+	// get accession and database name from url parameters 
+	// http://localhost/MassBank/jsp/RecordDisplay.jsp?id=XXX00001
+	// String accession = "XXX00001";
+	
+	String accession = null;
 	
 	Enumeration<String> names = request.getParameterNames();
 	while ( names.hasMoreElements() ) {
 		String key = (String) names.nextElement();
-		String val = (String) request.getParameter( key );
-		
+		String val = (String) request.getParameter( key );	
 		switch(key){
-			case "id":	accession		= val; break;
-			case "dsn":	databaseName	= val; break;
-			default: System.out.println("Warning: Unused argument " + key + "=" + val);
+			case "id":	accession = val; 
+						break;
+			default:		System.out.println("Warning: Unused argument " + key + "=" + val);
 		}
 	}
 	
-	if(databaseName != null && databaseName.equals("") && accession != null && !accession.equals("")){
-		databaseName	= AccessionData.getDatabaseOfAccession(accession);
-		
-		// redirect from URL without database parameter to URL with database parameter
-		String baseUrl	= MassBankEnv.get(MassBankEnv.KEY_BASE_URL);
-		String urlStub	= baseUrl + "jsp/RecordDisplay.jsp";
-		String redirectUrl	= urlStub + "?id=" + accession + "&dsn=" + databaseName;
-		
-		response.sendRedirect(redirectUrl);
-		return;
-	}
-	
-	if(accession != null && accession.equals(""))
-		accession		= null;
-	if(databaseName != null && databaseName.equals(""))
-		databaseName		= null;
-	
-	if(accession == null || databaseName == null){
-		if(accession == null)
+	// if accession is missing abort
+	if(accession != null && accession.equals("")) 
+		accession = null;	
+	if(accession == null) {
 			System.out.println("Error: Missing argument 'id'");
-		if(databaseName == null)
-			System.out.println("Error: Missing argument 'dsn'");
-		return;
+			return;
 	}
-	
-	// ##################################################################################################
+
 	// get accession data
-	//DatabaseManager dbManager	= new DatabaseManager(databaseName);
-	//AccessionData accData		= dbManager.getAccessionData(accession);
-	//dbManager.closeConnection();
 	
-	AccessionData accData	= AccessionData.getAccessionDataFromFile(databaseName, accession);
+	// AccessionData accData = AccessionData.getAccessionDataFromFile(databaseName, accession);
+	AccessionData accData = AccessionData.getAccessionDataFromDatabase(accession);
 	if(accData == null)
 		return;
 	
-	String shortName	= accData.RECORD_TITLE.split(";")[0].trim();
+	String shortName	= accData.get("RECORD_TITLE").get(0)[2];
+	shortName = shortName.substring(0,shortName.indexOf(";")).trim();
+			
+	// get clickable image data for structure view
 	
-	// ##################################################################################################
-	// get clickable image data
 	String tmpUrlFolder		= MassBankEnv.get(MassBankEnv.KEY_BASE_URL) + "temp";
 	//String tmpUrlFolder		= request.getServletContext().getAttribute("ctx").toString() + "/temp";// ${ctx}
 	String tmpFileFolder	= MassBankEnv.get(MassBankEnv.KEY_TOMCAT_APPTEMP_PATH);
@@ -102,7 +80,6 @@
 	if(clickablePreviewImageData != null)
 		svgMedium	= clickablePreviewImageData.getMediumClickableImage();
 	
-	// ##################################################################################################
 	// compile entry information
 	StringBuilder sb	= new StringBuilder();
 	
@@ -158,44 +135,54 @@ Links not implemented yet:
 
 <a href="URL" target="_blank">VAL</a>
 "<a href=\"URL\" target=\"_blank\">" + VAL + "</a>"
-	*/
+	*/	
+
+	sb.append("ACCESSION: " + accData.get("ACCESSION").get(0)[2] + "\n");
+	if(accData.get("RECORD_TITLE").get(0)[2] != null)	
+		sb.append("RECORD_TITLE: " + accData.get("RECORD_TITLE").get(0)[2] + "\n");
+	if(accData.get("DATE").get(0)[2] != null)			
+		sb.append("DATE: " + accData.get("DATE").get(0)[2] + "\n");
+	if(accData.get("AUTHORS").get(0)[2] != null)			
+		sb.append("AUTHORS: " + accData.get("AUTHORS").get(0)[2] + "\n");
+	if(accData.get("LICENSE").get(0)[2] != null)			
+		sb.append("LICENSE: " + "<a href=\"https://creativecommons.org/licenses/\" target=\"_blank\">" + accData.get("LICENSE").get(0)[2] + "</a>" + "\n");
+	if(accData.get("COPYRIGHT").get(0)[2] != null)		
+		sb.append("COPYRIGHT: " + accData.get("COPYRIGHT").get(0)[2] + "\n");
 	
-	sb.append("ACCESSION: " + accData.ACCESSION + "\n");
-	if(accData.RECORD_TITLE != null)	sb.append("RECORD_TITLE: " + accData.RECORD_TITLE + "\n");
-	if(accData.DATE != null)			sb.append("DATE: " + accData.DATE + "\n");
-	if(accData.AUTHORS != null)			sb.append("AUTHORS: " + accData.AUTHORS + "\n");
-	if(accData.LICENSE != null)			sb.append("LICENSE: " + "<a href=\"https://creativecommons.org/licenses/\" target=\"_blank\">" + accData.LICENSE + "</a>" + "\n");
-	if(accData.COPYRIGHT != null)		sb.append("COPYRIGHT: " + accData.COPYRIGHT + "\n");
-	
-	if(accData.PUBLICATION != null){
+	if(accData.get("PUBLICATION").get(0)[2] != null){
 		Pattern pattern = Pattern.compile(".*(PMID:[ ]?\\d{8,8}).*");
-	    Matcher matcher = pattern.matcher(accData.PUBLICATION);
+	    Matcher matcher = pattern.matcher(accData.get("PUBLICATION").get(0)[2]);
 	    if(matcher.matches()){
-	    	String PMID	= accData.PUBLICATION.substring(matcher.start(1), matcher.end(1));
+	    	String PMID	= accData.get("PUBLICATION").get(0)[2].substring(matcher.start(1), matcher.end(1));
 	    	String id	= PMID.substring("PMID:".length()).trim();
-	    	String PUBLICATION	= accData.PUBLICATION.replaceAll(PMID, "<a href=\"http:\\/\\/www.ncbi.nlm.nih.gov/pubmed/" + id + "?dopt=Citation\" target=\"_blank\">" + PMID + "</a>");
+	    	String PUBLICATION	= accData.get("PUBLICATION").get(0)[2].replaceAll(PMID, "<a href=\"http:\\/\\/www.ncbi.nlm.nih.gov/pubmed/" + id + "?dopt=Citation\" target=\"_blank\">" + PMID + "</a>");
 	    	sb.append("PUBLICATION: " + PUBLICATION + "\n");
 	    } else {
-			sb.append("PUBLICATION: " + accData.PUBLICATION + "\n");
+			sb.append("PUBLICATION: " + accData.get("PUBLICATION").get(0)[2] + "\n");
 	    }
 	}
 	
-	for(String COMMENT : accData.COMMENT)
-		sb.append("COMMENT: " + COMMENT + "\n");
+	for(String COMMENT[] : accData.get("COMMENT"))
+		sb.append("COMMENT: " + COMMENT[2] + "\n");
 	sb.append("<hr size=\"1\" color=\"silver\" width=\"98%\" align=\"left\">");
-	for(String CH$NAME : accData.CH$NAME)
-		sb.append("CH$NAME: " + CH$NAME + "\n");
-	for(int idx = 0; idx < accData.CH$COMPOUND_CLASS_NAME.length; idx++)
-		sb.append("CH$COMPOUND_CLASS: " + accData.CH$COMPOUND_CLASS_CLASS[idx] + " " + accData.CH$COMPOUND_CLASS_NAME[idx] + "\n");
-	if(accData.CH$FORMULA != null)		sb.append("CH$FORMULA: " + "<a href=\"http://www.chemspider.com/Search.aspx?q=" + accData.CH$FORMULA + "\" target=\"_blank\">" + accData.CH$FORMULA + "</a>" + "\n");
-	if(accData.CH$EXACT_MASS != -1)		sb.append("CH$EXACT_MASS: " + accData.CH$EXACT_MASS + "\n");
-	if(accData.CH$SMILES != null)		sb.append("CH$SMILES: " + accData.CH$SMILES + "\n");
-	if(accData.CH$IUPAC != null)		sb.append("CH$IUPAC: " + accData.CH$IUPAC + "\n");
+	for(String CH$NAME[] : accData.get("CH$NAME"))
+		sb.append("CH$NAME: " + CH$NAME[2] + "\n");
+	for(int idx = 0; idx < accData.get("CH$COMPOUND_CLASS").size(); idx++)
+		sb.append("CH$COMPOUND_CLASS: " + accData.get("CH$COMPOUND_CLASS").get(idx)[2] + "\n");
+//		sb.append("CH$COMPOUND_CLASS: " + accData.CH$COMPOUND_CLASS_CLASS[idx] + " " + accData.CH$COMPOUND_CLASS_NAME[idx] + "\n");
+	if(accData.get("CH$FORMULA").get(0)[2] != null)		
+		sb.append("CH$FORMULA: " + "<a href=\"http://www.chemspider.com/Search.aspx?q=" + accData.get("CH$FORMULA").get(0)[2] + "\" target=\"_blank\">" + accData.get("CH$FORMULA").get(0)[2] + "</a>" + "\n");
+	if(Double.parseDouble(accData.get("CH$EXACT_MASS").get(0)[2]) != -1)		
+		sb.append("CH$EXACT_MASS: " + accData.get("CH$EXACT_MASS").get(0)[2] + "\n");
+	if(accData.get("CH$SMILES").get(0)[2] != null)		
+		sb.append("CH$SMILES: " + accData.get("CH$SMILES").get(0)[2] + "\n");
+	if(accData.get("CH$IUPAC").get(0)[2] != null)		
+		sb.append("CH$IUPAC: " + accData.get("CH$IUPAC").get(0)[2] + "\n");
 	
 	// TODO fetch from AccessionData accData
-	String CH$CDK_DEPICT_SMILES				= null;//"CCOCCOCCO |Sg:n:3,4,5:2:ht| PEG-2";
-	String CH$CDK_DEPICT_GENERIC_SMILES		= null;//"c1ccc(cc1)/C=C/C(=O)O[R]";
-	String CH$CDK_DEPICT_STRUCTURE_SMILES	= null;//"c1ccc(cc1)/C=C/C(=O)O";
+	String CH$CDK_DEPICT_SMILES				= accData.get("CH$CDK_DEPICT_SMILES").get(0)[2];//"CCOCCOCCO |Sg:n:3,4,5:2:ht| PEG-2";
+	String CH$CDK_DEPICT_GENERIC_SMILES		= accData.get("CH$CDK_DEPICT_GENERIC_SMILES").get(0)[2];//"c1ccc(cc1)/C=C/C(=O)O[R]";
+	String CH$CDK_DEPICT_STRUCTURE_SMILES	= accData.get("CH$CDK_DEPICT_STRUCTURE_SMILES").get(0)[2];//"c1ccc(cc1)/C=C/C(=O)O";
 	
 	if(CH$CDK_DEPICT_SMILES != null){
 		ClickablePreviewImageData clickablePreviewImageData2	= StructureToSvgStringGenerator.createClickablePreviewImage(
@@ -233,9 +220,9 @@ Links not implemented yet:
 			sb.append("CH$CDK_DEPICT_STRUCTURE_SMILES: " + CH$CDK_DEPICT_STRUCTURE_SMILES + "\n");
 	}
 	
-	for(int idx = 0; idx < accData.CH$LINK_ID.length; idx++){
-		String CH$LINK_ID	= accData.CH$LINK_ID[idx];
-		switch(accData.CH$LINK_NAME[idx]){
+	for(int idx = 0; idx < accData.get("CH$LINK").size(); idx++){
+		String CH$LINK_ID	= accData.get("CH$LINK").get(idx)[2];
+		switch(accData.get("CH$LINK").get(idx)[1]){
 			case "CAS":								CH$LINK_ID	= "<a href=\"https://www.google.com/search?q=&quot;" + CH$LINK_ID + "&quot;"									+ "\" target=\"_blank\">" + CH$LINK_ID + "</a>"; break;
 			case "CAYMAN":                      	CH$LINK_ID	= "<a href=\"https://www.caymanchem.com/app/template/Product.vm/catalog/" + CH$LINK_ID							+ "\" target=\"_blank\">" + CH$LINK_ID + "</a>"; break;
 			case "CHEBI":                       	CH$LINK_ID	= "<a href=\"https://www.ebi.ac.uk/chebi/searchId.do?chebiId=CHEBI:" + CH$LINK_ID								+ "\" target=\"_blank\">" + CH$LINK_ID + "</a>"; break;
@@ -261,42 +248,57 @@ Links not implemented yet:
 			}
 		}
 		
-		sb.append("CH$LINK: " + accData.CH$LINK_NAME[idx] + " " + CH$LINK_ID + "\n");
+		sb.append("CH$LINK: " + accData.get("CH$LINK").get(idx)[1] + " " + CH$LINK_ID + "\n");
 	}
 	sb.append("<hr size=\"1\" color=\"silver\" width=\"98%\" align=\"left\">");
-	sb.append("AC$INSTRUMENT: " + accData.AC$INSTRUMENT + "\n");
-	sb.append("AC$INSTRUMENT_TYPE: " + accData.AC$INSTRUMENT_TYPE + "\n");
-	for(String AC$MASS_SPECTROMETRY : accData.AC$MASS_SPECTROMETRY)
-		sb.append("AC$MASS_SPECTROMETRY: " + AC$MASS_SPECTROMETRY + "\n");
-	for(String AC$CHROMATOGRAPHY : accData.AC$CHROMATOGRAPHY)
-		sb.append("AC$CHROMATOGRAPHY: " + AC$CHROMATOGRAPHY + "\n");
+	sb.append("AC$INSTRUMENT: " + accData.get("AC$INSTRUMENT").get(0)[2] + "\n");
+	sb.append("AC$INSTRUMENT_TYPE: " + accData.get("AC$INSTRUMENT_TYPE").get(0)[2] + "\n");
+	if (accData.get("AC$MASS_SPECTROMETRY") != null) {
+		for(String AC$MASS_SPECTROMETRY[] : accData.get("AC$MASS_SPECTROMETRY")) {
+			sb.append("AC$MASS_SPECTROMETRY: " + AC$MASS_SPECTROMETRY[1] + " " + AC$MASS_SPECTROMETRY[2] + "\n");
+		}
+	}
+	if (accData.get("AC$CHROMATOGRAPHY") != null) {
+		for(String AC$CHROMATOGRAPHY[] : accData.get("AC$CHROMATOGRAPHY")) {
+			sb.append("AC$CHROMATOGRAPHY: " + AC$CHROMATOGRAPHY[1] + " " + AC$CHROMATOGRAPHY + "\n");
+		}
+	}
 	sb.append("<hr size=\"1\" color=\"silver\" width=\"98%\" align=\"left\">");
-	for(String MS$FOCUSED_ION : accData.MS$FOCUSED_ION)
-		sb.append("MS$FOCUSED_ION: " + MS$FOCUSED_ION + "\n");
-	for(String MS$DATA_PROCESSING : accData.MS$DATA_PROCESSING)
-		sb.append("MS$DATA_PROCESSING: " + MS$DATA_PROCESSING + "\n");
+	if (accData.get("MS$FOCUSED_ION") != null) {
+		for(String MS$FOCUSED_ION[] : accData.get("MS$FOCUSED_ION")) {
+			sb.append("MS$FOCUSED_ION: " + MS$FOCUSED_ION[1] + " " + MS$FOCUSED_ION[2] + "\n");
+		}
+	}
+	if (accData.get("MS$DATA_PROCESSING") != null) {
+		for(String MS$DATA_PROCESSING[] : accData.get("MS$DATA_PROCESSING")) {
+			sb.append("MS$DATA_PROCESSING: " + MS$DATA_PROCESSING[1] + " " + MS$DATA_PROCESSING[2] + "\n");
+		}
+	}
 	sb.append("<hr size=\"1\" color=\"silver\" width=\"98%\" align=\"left\">");
-	if(accData.PK$SPLASH != null)		sb.append("PK$SPLASH: " + "<a href=\"http://mona.fiehnlab.ucdavis.edu/#/spectra/splash/" + accData.PK$SPLASH + "\" target=\"_blank\">" + accData.PK$SPLASH + "</a>" + "\n"); // https://www.google.com/search?q=&quot;%s&quot;
+	if(accData.get("PK$SPLASH").get(0)[2] != null)		
+		sb.append("PK$SPLASH: " + "<a href=\"http://mona.fiehnlab.ucdavis.edu/#/spectra/splash/" +accData.get("PK$SPLASH").get(0)[2] + "\" target=\"_blank\">" + accData.get("PK$SPLASH").get(0)[2] + "</a>" + "\n"); // https://www.google.com/search?q=&quot;%s&quot;
 //	PK$ANNOTATION: m/z tentative_formula formula_count mass error(ppm)
 //	  57.0701 C4H9+ 1 57.0699 4.61
 //	  67.0542 C5H7+ 1 67.0542 0.35
 //	  69.0336 C4H5O+ 1 69.0335 1.14
-	sb.append("PK$NUM_PEAK: " + accData.PK$PEAK_MZ.length + "\n");
+	sb.append("PK$NUM_PEAK: " + accData.get("PK$NUM_PEAK").get(0)[2] + "\n");
 	
 	sb.append("PK$PEAK: m/z int. rel.int." + "\n");
 	
-	String[] PK$PEAK_MZ		= accData.formatPK$PEAK_MZ(true);
-	String[] PK$PEAK_INT	= accData.formatPK$PEAK_INT(true);
-	String[] PK$PEAK_REL	= accData.formatPK$PEAK_REL(true);
-	for(int idx = 0; idx < accData.PK$PEAK_MZ.length; idx++)
-		sb.append("  " + 
-				PK$PEAK_MZ [idx] + " " + 
-				PK$PEAK_INT[idx] + " " + 
-				PK$PEAK_REL[idx] + "\n"
-		);
+// 	String[] PK$PEAK_MZ		= accData.formatPK$PEAK_MZ(true);
+// 	String[] PK$PEAK_INT	= accData.formatPK$PEAK_INT(true);
+// 	String[] PK$PEAK_REL	= accData.formatPK$PEAK_REL(true);
+	for(int idx = 0; idx < accData.get("PK$PEAK").size(); idx++)
+		sb.append("  " + accData.get("PK$PEAK").get(idx)[2] + "\n");
+// 		sb.append("  " + 
+// 				PK$PEAK_MZ [idx] + " " + 
+// 				PK$PEAK_INT[idx] + " " + 
+// 				PK$PEAK_REL[idx] + "\n"
+// 		);
 	sb.append("//");
 	
-	String recordString	= sb.toString();
+	String recordString	= sb.toString();	
+	
 %>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html lang="en">
@@ -307,7 +309,7 @@ Links not implemented yet:
 		<meta name="Targeted Geographic Area" content="worldwide" />
 		<meta name="rating" content="general" />
 		<meta name="copyright" content="Copyright (c) 2006 MassBank Project and (c) 2011 NORMAN Association" />
-		<meta name="description" content="MassBank Record of <%=accData.ACCESSION%>">
+		<meta name="description" content="MassBank Record of <%=accData.get("ACCESSION").get(0)[2]%>">
 		<meta name="keywords" content="<%=shortName%>, mass spectrum, MassBank record, mass spectrometry, mass spectral library">
 		<meta name="revisit_after" content="30 days">
 		<meta name="hreflang" content="en">
@@ -332,14 +334,14 @@ Links not implemented yet:
 		<table border="0" cellpadding="0" cellspacing="0" width="100%">
 			<tr>
 				<td>
-					<h1>MassBank Record: <%=accData.ACCESSION%> </h1>
+					<h1>MassBank Record: <%=accData.get("ACCESSION").get(0)[2]%> </h1>
 				</td>
 			</tr>
 		</table>
 		<iframe src="../menu.html" width="860" height="30px" frameborder="0" marginwidth="0" scrolling="no"></iframe>
 		<hr size="1">
 		<br>
-		<font size="+1" style="background-color:LightCyan">&nbsp;<%=accData.RECORD_TITLE%> (3)&nbsp;</font>
+		<font size="+1" style="background-color:LightCyan">&nbsp;<%=accData.get("RECORD_TITLE").get(0)[2]%> (3)&nbsp;</font>
 		<hr size="1">
 		<table>
 			<tr>
