@@ -68,9 +68,9 @@ public class StructureToSvgStringGenerator {
 			int sizeSmall, int sizeMedium, int sizeBig
 	){
 		// fetch accession data
-		DatabaseManager dbManager	= new DatabaseManager(databaseName);
+		DatabaseManager dbManager	= DatabaseManager.create(databaseName);
 		AccessionData accData	= dbManager.getAccessionData(accession);
-		dbManager.closeConnection();
+//		dbManager.closeConnection();
 		
 //		AccessionData accData	= AccessionData.getAccessionDataFromFile(databaseName, accession);
 		if(accData == null)
@@ -87,9 +87,12 @@ public class StructureToSvgStringGenerator {
 			int sizeSmall, int sizeMedium, int sizeBig
 	){
 		// fetch structure
-		String accession	= accData.ACCESSION;
-		String inchi		= accData.CH$IUPAC;
-		String smiles		= accData.CH$SMILES;
+//		String accession	= accData.ACCESSION;
+		String accession = accData.get("ACCESSION").get(0)[2];
+//		String inchi		= accData.CH$IUPAC;
+		String inchi = accData.get("CH$IUPAC").get(0)[2];
+//		String smiles		= accData.CH$SMILES;
+		String smiles = accData.get("CH$SMILES").get(0)[2];
 		
 		return StructureToSvgStringGenerator.createClickablePreviewImage(
 				accession, inchi, smiles, 
